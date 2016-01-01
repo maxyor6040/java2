@@ -1,5 +1,5 @@
 package solution;
-public class StoryTester implements provided.StoryTester{
+public class StoryTesterImpl implements provided.StoryTester{
     /**
      * Runs a given story on an instance of a given class, or an instances of its
      * ancestors. before running the story use must create an instance of the given
