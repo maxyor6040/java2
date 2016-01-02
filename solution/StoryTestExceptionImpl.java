@@ -1,15 +1,27 @@
 package solution;
 
 import provided.StoryTestException;
+
 public class StoryTestExceptionImpl extends StoryTestException {
+    public String firstFailedThenSentence;
+    public String expectedValueOfFirstFailedThen;
+    public String actualValueOfFirstFailedThen;
+    public int countFailedThen;
+
+    StoryTestExceptionImpl() {
+        firstFailedThenSentence = null;
+        expectedValueOfFirstFailedThen = null;
+        actualValueOfFirstFailedThen = null;
+        countFailedThen = 0;
+    }
+
     /**
      * Returns a string representing the sentence
      * of the first Then sentence that failed
      */
     @Override
     public String getSentance() {
-        return null;
-        //TODO implement
+        return firstFailedThenSentence;
     }
 
     /**
@@ -18,8 +30,7 @@ public class StoryTestExceptionImpl extends StoryTestException {
      */
     @Override
     public String getStoryExpected() {
-        return null;
-        //TODO implement
+        return expectedValueOfFirstFailedThen;
     }
 
     /**
@@ -28,8 +39,7 @@ public class StoryTestExceptionImpl extends StoryTestException {
      */
     @Override
     public String getTestResult() {
-        return null;
-        //TODO implement
+        return actualValueOfFirstFailedThen;
     }
 
     /**
@@ -37,7 +47,6 @@ public class StoryTestExceptionImpl extends StoryTestException {
      */
     @Override
     public int getNumFail() {
-        return 0;
-        //TODO implement
+        return countFailedThen;
     }
 }
