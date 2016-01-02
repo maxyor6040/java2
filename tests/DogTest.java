@@ -87,5 +87,13 @@ public class DogTest {
 			Assert.assertTrue(false);
 		}
 	}
+	@Test
+	public void testForDebug() throws Exception{
+		try{
+			tester.testOnInheritanceTree(goodStory,testClass);
+		} catch (StoryTestException e) {
+			Assert.assertTrue(false);
+		}
+	}
 
 }
