@@ -1,15 +1,16 @@
 package solution;
 
-import junit.framework.ComparisonFailure;
 import provided.GivenNotFoundException;
 import provided.ThenNotFoundException;
 import provided.WhenNotFoundException;
 import provided.WordNotFoundException;
+import sun.print.BackgroundLookupListener;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 
 public class StoryTesterImpl implements provided.StoryTester {
     /**
@@ -59,6 +60,7 @@ public class StoryTesterImpl implements provided.StoryTester {
         //endregion
 
         //region When\Then
+        BackupTool backupTool = new BackupTool(testClass);
         boolean lastLineWasThen = true;
         for (int i = 1; i < storyLines.length; ++i) {
             Method methodToInvoke;
@@ -66,7 +68,7 @@ public class StoryTesterImpl implements provided.StoryTester {
             parameterInStoryLine = storyLines[i].substring(storyLines[i].lastIndexOf(" ") + 1, storyLines[i].length());
             if (storyLines[i].substring(0, 4).equals("When")) {
                 if (lastLineWasThen)
-                    System.out.println("backup would be here");//TODO run backup
+                    backupTool.backup(testInstance);
                 lastLineWasThen = false;
                 methodToInvoke = getMethodOnInheritanceTree(testClass, When.class, annotationValue);
                 if (methodToInvoke == null)
@@ -77,32 +79,61 @@ public class StoryTesterImpl implements provided.StoryTester {
                 methodToInvoke = getMethodOnInheritanceTree(testClass, Then.class, annotationValue);
                 if (methodToInvoke == null)
                     throw new ThenNotFoundException();
-                invokeMethod(methodToInvoke, testInstance, parameterInStoryLine);//should handle ComparisonFailure here & restore if necessary
+                invokeMethod(methodToInvoke, testInstance, parameterInStoryLine);//TODO should handle ComparisonFailure here & restore if necessary
             } else {
                 throw new WordNotFoundException();//should not happen because it wont be tested
             }
-            /* Nachum's ComparisonFailure handler:
-            try {
-                invokeMethod(methodToInvoke, testInstance, parameterInStoryLine);//TODO maybe different to each type
-            } catch (InvocationTargetException e) {
-                try {
-                    Throwable ea = e.getCause();
-                    throw ea;
-                } catch (ComparisonFailure ce) {
-                    storyException = new StoryTestExceptionImpl();
-                    storyException.setFailedSentence(LineBackup, ce.getActual());
-                    storyException.incNumFailed();
-                } catch (Throuable e1) {
-                    //TODO: How to handle here?
-                }
-            }*/
+            //Nachum's ComparisonFailure handler:
+            //try {
+            //    invokeMethod(methodToInvoke, testInstance, parameterInStoryLine);
+            //} catch (InvocationTargetException e) {
+            //    try {
+            //        Throwable ea = e.getCause();
+            //        throw ea;
+            //    } catch (ComparisonFailure ce) {
+            //        storyException = new StoryTestExceptionImpl();
+            //        storyException.setFailedSentence(LineBackup, ce.getActual());
+            //        storyException.incNumFailed();
+            //    } catch (Throuable e1) {
+            //        //How to handle here?
+            //    }
+            //}
 
         }
         //endregion
 
-        //TODO: if number of failes != 0 then should throw StoryTestException with all it's values.
-        //TODO: figure out how to catch that exception
-        //TODO: handle the backup/restore thing
+        //TODO: 1)if number of failes != 0 then should throw StoryTestException with all it's values.
+        //TODO: 2)figure out how to catch that exception
+        //TODO: 3)handle the backup/restore thing
+    }
+
+    private class BackupTool {
+        private Object backupOfObject;
+        private Class<?> classOfBackup;
+
+        public BackupTool(Class<?> cls) {
+            backupOfObject = null;
+            classOfBackup = cls;
+        }
+
+        public void backup(Object obj) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, InstantiationException {
+            if (Arrays.asList(classOfBackup.getInterfaces()).contains(Cloneable.class)) {
+                backupOfObject = classOfBackup.getMethod("clone").invoke(obj);
+                return;
+            }
+            Constructor<?> copyConstructor = classOfBackup.getConstructor(classOfBackup);
+            if (copyConstructor != null) {
+                backupOfObject = copyConstructor.newInstance(obj);
+                return;
+            }
+            //think how to get a backup otherwise
+            //TODO implement the rest
+        }
+
+        public Object restore() {
+            return backupOfObject;
+            //TODO implement
+        }
     }
 
     private void invokeMethod(Method method, Object Object, String parameter) throws Exception {

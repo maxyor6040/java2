@@ -6,7 +6,7 @@ import solution.Given;
 import solution.Then;
 import solution.When;
 
-public class DogStoryTest {
+public class DogStoryTest implements Cloneable{
 	protected Dog dog;
 	@Given("a Dog of age &age")
 	public void aDog(Integer age) {
@@ -21,5 +21,8 @@ public class DogStoryTest {
 	@Then("the house condition is &condition")
 	public void theHouseCondition(String condition) {
 		Assert.assertEquals(condition, dog.houseCondition());
+	}
+	public DogStoryTest clone() throws CloneNotSupportedException {
+			return (DogStoryTest) super.clone();
 	}
 }

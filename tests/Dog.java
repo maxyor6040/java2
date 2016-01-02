@@ -1,6 +1,6 @@
 package tests;
 
-public class Dog {
+public class Dog implements Cloneable{
 	private int age,hoursCleaningFloors;
 	private boolean peeOnFloor;
 	
