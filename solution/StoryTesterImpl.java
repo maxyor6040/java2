@@ -99,6 +99,10 @@ public class StoryTesterImpl implements provided.StoryTester {
 
         }
         //endregion
+
+        //TODO: if number of failes != 0 then should throw StoryTestException with all it's values.
+        //TODO: figure out how to catch that exception
+        //TODO: handle the backup/restore thing
     }
 
     private void invokeMethod(Method method, Object Object, String parameter) throws Exception {
