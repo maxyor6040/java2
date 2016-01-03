@@ -102,7 +102,6 @@ public class StoryTesterImpl implements provided.StoryTester {
                         System.out.println("parameterInStoryLine="+parameterInStoryLine);
                     }
                 }
-                //TODO should handle ComparisonFailure here & restore if necessary
                 //endregion
             } else {
                 throw new WordNotFoundException();//should not happen because it wont be tested
@@ -113,9 +112,6 @@ public class StoryTesterImpl implements provided.StoryTester {
         if(storyTestException.countFailedThen>0){
             throw storyTestException;
         }
-        //TODO: 1)if number of failes != 0 then should throw StoryTestException with all it's values.
-        //TODO: 2)figure out how to catch that exception
-        //TODO: 3)handle the backup/restore thing
     }
 
     private class BackupTool {
