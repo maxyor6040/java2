@@ -57,6 +57,7 @@ public class StoryTesterImpl implements provided.StoryTester {
         if (methodWithGivenAnnotation == null)
             throw new GivenNotFoundException();
         String parameterInStoryLine = storyLines[0].substring(storyLines[0].lastIndexOf(" ") + 1, storyLines[0].length());
+        methodWithGivenAnnotation.setAccessible(true);
         invokeMethod(methodWithGivenAnnotation, testInstance, parameterInStoryLine);
         //endregion
 
@@ -84,6 +85,7 @@ public class StoryTesterImpl implements provided.StoryTester {
                     throw new ThenNotFoundException();
                 //region invoke Then method
                 try {
+                    methodToInvoke.setAccessible(true);
                     invokeMethod(methodToInvoke, testInstance, parameterInStoryLine);
                 } catch (InvocationTargetException e) {
                     try {
