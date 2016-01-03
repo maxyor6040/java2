@@ -6,7 +6,6 @@ import org.junit.Test;
 
 import provided.StoryTestException;
 import provided.StoryTester;
-import provided.WordNotFoundException;
 import solution.StoryTesterImpl;
 
 /**
@@ -91,10 +90,8 @@ public class DogTest {
 	@Test
 	public void testForDebug() throws Exception{
 		try{
-			System.out.println("before");
 			tester.testOnInheritanceTree(goodStory,testClass);
-			System.out.println("after");
-		} catch (WordNotFoundException e) {
+		} catch (StoryTestException e) {
 			Assert.assertTrue(false);
 		}
 	}

@@ -1,13 +1,14 @@
 package solution;
 
+import junit.framework.ComparisonFailure;
 import provided.GivenNotFoundException;
 import provided.ThenNotFoundException;
 import provided.WhenNotFoundException;
 import provided.WordNotFoundException;
-import sun.print.BackgroundLookupListener;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -60,6 +61,7 @@ public class StoryTesterImpl implements provided.StoryTester {
         //endregion
 
         //region When\Then
+        StoryTestExceptionImpl storyTestException = new StoryTestExceptionImpl();
         BackupTool backupTool = new BackupTool(testClass);
         boolean lastLineWasThen = true;
         for (int i = 1; i < storyLines.length; ++i) {
@@ -73,68 +75,99 @@ public class StoryTesterImpl implements provided.StoryTester {
                 methodToInvoke = getMethodOnInheritanceTree(testClass, When.class, annotationValue);
                 if (methodToInvoke == null)
                     throw new WhenNotFoundException();
+                methodToInvoke.setAccessible(true);
                 invokeMethod(methodToInvoke, testInstance, parameterInStoryLine);
             } else if (storyLines[i].substring(0, 4).equals("Then")) {
                 lastLineWasThen = true;
                 methodToInvoke = getMethodOnInheritanceTree(testClass, Then.class, annotationValue);
                 if (methodToInvoke == null)
                     throw new ThenNotFoundException();
-                invokeMethod(methodToInvoke, testInstance, parameterInStoryLine);//TODO should handle ComparisonFailure here & restore if necessary
+                //region invoke Then method
+                try {
+                    invokeMethod(methodToInvoke, testInstance, parameterInStoryLine);
+                } catch (InvocationTargetException e) {
+                    try {
+                        throw e.getCause();
+                    } catch (org.junit.ComparisonFailure ce) {
+                        if(storyTestException.countFailedThen == 0) {
+                            storyTestException.firstFailedThenSentence = storyLines[i];
+                            storyTestException.actualValueOfFirstFailedThen  = ce.getActual();
+                            System.out.println("ce.getActual()="+ce.getActual());
+                            System.out.println("parameterInStoryLine="+parameterInStoryLine);
+                            storyTestException.expectedValueOfFirstFailedThen = parameterInStoryLine;
+                        }
+                        storyTestException.countFailedThen++;
+                        backupTool.restore(testInstance);
+                    } catch (Throwable ignored) {//should not happen because it wont be tested
+                        System.out.println("parameterInStoryLine="+parameterInStoryLine);
+                    }
+                }
+                //TODO should handle ComparisonFailure here & restore if necessary
+                //endregion
             } else {
                 throw new WordNotFoundException();//should not happen because it wont be tested
             }
-            //Nachum's ComparisonFailure handler:
-            //try {
-            //    invokeMethod(methodToInvoke, testInstance, parameterInStoryLine);
-            //} catch (InvocationTargetException e) {
-            //    try {
-            //        Throwable ea = e.getCause();
-            //        throw ea;
-            //    } catch (ComparisonFailure ce) {
-            //        storyException = new StoryTestExceptionImpl();
-            //        storyException.setFailedSentence(LineBackup, ce.getActual());
-            //        storyException.incNumFailed();
-            //    } catch (Throuable e1) {
-            //        //How to handle here?
-            //    }
-            //}
-
         }
         //endregion
 
+        if(storyTestException.countFailedThen>0){
+            throw storyTestException;
+        }
         //TODO: 1)if number of failes != 0 then should throw StoryTestException with all it's values.
         //TODO: 2)figure out how to catch that exception
         //TODO: 3)handle the backup/restore thing
     }
 
     private class BackupTool {
-        private Object backupOfObject;
         private Class<?> classOfBackup;
+        private Object[] fieldsValues;
 
         public BackupTool(Class<?> cls) {
-            backupOfObject = null;
+            fieldsValues = null;
             classOfBackup = cls;
         }
 
-        public void backup(Object obj) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, InstantiationException {
-            if (Arrays.asList(classOfBackup.getInterfaces()).contains(Cloneable.class)) {
-                backupOfObject = classOfBackup.getMethod("clone").invoke(obj);
-                return;
+        public void backup(Object obj) {
+            Field[] toBackup = classOfBackup.getFields();
+            fieldsValues = new Object[toBackup.length];
+            for (int i = 0; i < toBackup.length; ++i) {
+                if (Arrays.asList(toBackup[i].getType().getInterfaces()).contains(Cloneable.class)) {
+
+                    try {
+                        fieldsValues[i] = toBackup[i].getType().getMethod("clone").invoke(toBackup[i].get(obj));
+                        continue;
+                    } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException ignored) {
+                    }
+
+                }
+                Constructor<?> copyConstructor;
+                try {
+                    copyConstructor = classOfBackup.getConstructor(classOfBackup);
+                    if (copyConstructor != null) {
+                        fieldsValues[i] = copyConstructor.newInstance(toBackup[i].get(obj));
+                        continue;
+                    }
+                } catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException ignored) {
+                }
+                try {
+                    fieldsValues[i] = toBackup[i].get(obj);
+                } catch (IllegalAccessException ignored) {
+                }
             }
-            Constructor<?> copyConstructor = classOfBackup.getConstructor(classOfBackup);
-            if (copyConstructor != null) {
-                backupOfObject = copyConstructor.newInstance(obj);
-                return;
-            }
-            //think how to get a backup otherwise
-            //TODO implement the rest
         }
 
-        public Object restore() {
-            return backupOfObject;
-            //TODO implement
+        public void restore(Object obj) {
+            Field[] toBackup = classOfBackup.getFields();
+            for (int i = 0; i < toBackup.length; ++i) {
+                try {
+                    toBackup[i].set(obj, fieldsValues[i]);
+                } catch (IllegalAccessException ignored) {
+                }
+            }
+
         }
     }
+
 
     private void invokeMethod(Method method, Object Object, String parameter) throws Exception {
         if (isNumeric(parameter))
@@ -146,7 +179,7 @@ public class StoryTesterImpl implements provided.StoryTester {
     private Method getMethodOnInheritanceTree(Class<?> currentClass, Class<?> annotationClass, String annotationValue) {
         if (currentClass == null)
             return null;
-        for (Method method : currentClass.getMethods()) {
+        for (Method method : currentClass.getDeclaredMethods()) {
             for (Annotation annotation : method.getAnnotations()) {
                 if (correctAnnotation(annotationClass, annotationValue, annotation)) return method;
             }
