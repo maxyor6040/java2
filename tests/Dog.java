@@ -1,7 +1,8 @@
 package tests;
 
 public class Dog implements Cloneable{
-	private int age,hoursCleaningFloors;
+	public int age,hoursCleaningFloors;
+	public boolean stupid_dog;
 	private boolean peeOnFloor;
 	
 	public Dog(int age) {
@@ -32,5 +33,9 @@ public class Dog implements Cloneable{
 			return "smelly";
 		}
 		return "clean";
+	}
+	@Override
+	public Dog clone() throws CloneNotSupportedException{
+		return (Dog) super.clone();
 	}
 }

@@ -15,6 +15,7 @@ import solution.StoryTesterImpl;
 public class DogTest {
 
 	private StoryTester tester;
+	private String fck_up_story;
 	private String goodStory;
 	private String badStory;
 	private String derivedStory;
@@ -40,6 +41,15 @@ public class DogTest {
 		nestedStory = "Given a Dog that his age is 6\n"
 				+ "When the dog is not taken out for a walk, and the number of hours is 5\n"
 				+ "Then the house condition is clean";
+		
+		fck_up_story = "Given a Dog of age 6\n"
+				+ "When the dog is not taken out for a walk, and the number of hours is 5\n"
+				+ "Then the house condition is clean\n"
+				+ "When the dog is not taken out for a walk, and the number of hours is 10\n"
+				+ "Then the house condition is clean\n"
+				+ "When the dog is not taken out for a walk, and the number of hours is 5\n"
+				+ "Then the house condition is clean";
+		
 		testClass = DogStoryTest.class;
 		derivedTestClass = DogStoryDerivedTest.class;
 		tester = new StoryTesterImpl();
@@ -87,13 +97,17 @@ public class DogTest {
 			Assert.assertTrue(false);
 		}
 	}
+	
 	@Test
-	public void testForDebug() throws Exception{
-		try{
-			tester.testOnInheritanceTree(goodStory,testClass);
-		} catch (StoryTestException e) {
+	public void test5() throws Exception {
+		try {
+			tester.testOnInheritanceTree(fck_up_story, testClass);
 			Assert.assertTrue(false);
+		} catch (StoryTestException e) {
+			Assert.assertTrue(true);
+			Assert.assertEquals(e.getNumFail(), 1);
 		}
 	}
+
 
 }

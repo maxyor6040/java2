@@ -57,7 +57,6 @@ public class StoryTesterImpl implements provided.StoryTester {
         if (methodWithGivenAnnotation == null)
             throw new GivenNotFoundException();
         String parameterInStoryLine = storyLines[0].substring(storyLines[0].lastIndexOf(" ") + 1, storyLines[0].length());
-        methodWithGivenAnnotation.setAccessible(true);
         invokeMethod(methodWithGivenAnnotation, testInstance, parameterInStoryLine);
         //endregion
 
@@ -76,7 +75,6 @@ public class StoryTesterImpl implements provided.StoryTester {
                 methodToInvoke = getMethodOnInheritanceTree(testClass, When.class, annotationValue);
                 if (methodToInvoke == null)
                     throw new WhenNotFoundException();
-                methodToInvoke.setAccessible(true);
                 invokeMethod(methodToInvoke, testInstance, parameterInStoryLine);
             } else if (storyLines[i].substring(0, 4).equals("Then")) {
                 lastLineWasThen = true;
@@ -85,7 +83,6 @@ public class StoryTesterImpl implements provided.StoryTester {
                     throw new ThenNotFoundException();
                 //region invoke Then method
                 try {
-                    methodToInvoke.setAccessible(true);
                     invokeMethod(methodToInvoke, testInstance, parameterInStoryLine);
                 } catch (InvocationTargetException e) {
                     try {
@@ -94,14 +91,11 @@ public class StoryTesterImpl implements provided.StoryTester {
                         if(storyTestException.countFailedThen == 0) {
                             storyTestException.firstFailedThenSentence = storyLines[i];
                             storyTestException.actualValueOfFirstFailedThen  = ce.getActual();
-                            System.out.println("ce.getActual()="+ce.getActual());
-                            System.out.println("parameterInStoryLine="+parameterInStoryLine);
                             storyTestException.expectedValueOfFirstFailedThen = parameterInStoryLine;
                         }
                         storyTestException.countFailedThen++;
                         backupTool.restore(testInstance);
                     } catch (Throwable ignored) {//should not happen because it wont be tested
-                        System.out.println("parameterInStoryLine="+parameterInStoryLine);
                     }
                 }
                 //endregion
@@ -126,13 +120,16 @@ public class StoryTesterImpl implements provided.StoryTester {
         }
 
         public void backup(Object obj) {
-            Field[] toBackup = classOfBackup.getFields();
+            Field[] toBackup = classOfBackup.getDeclaredFields();
             fieldsValues = new Object[toBackup.length];
             for (int i = 0; i < toBackup.length; ++i) {
+                toBackup[i].setAccessible(true);
                 if (Arrays.asList(toBackup[i].getType().getInterfaces()).contains(Cloneable.class)) {
 
                     try {
-                        fieldsValues[i] = toBackup[i].getType().getMethod("clone").invoke(toBackup[i].get(obj));
+                        Method cloneMethod = toBackup[i].getType().getMethod("clone");
+                        cloneMethod.setAccessible(true);
+                        fieldsValues[i] = cloneMethod.invoke(toBackup[i].get(obj));
                         continue;
                     } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException ignored) {
                     }
@@ -140,8 +137,9 @@ public class StoryTesterImpl implements provided.StoryTester {
                 }
                 Constructor<?> copyConstructor;
                 try {
-                    copyConstructor = classOfBackup.getConstructor(classOfBackup);
+                    copyConstructor = toBackup[i].getType().getConstructor(toBackup[i].getType());
                     if (copyConstructor != null) {
+                        copyConstructor.setAccessible(true);
                         fieldsValues[i] = copyConstructor.newInstance(toBackup[i].get(obj));
                         continue;
                     }
@@ -155,9 +153,10 @@ public class StoryTesterImpl implements provided.StoryTester {
         }
 
         public void restore(Object obj) {
-            Field[] toBackup = classOfBackup.getFields();
+            Field[] toBackup = classOfBackup.getDeclaredFields();
             for (int i = 0; i < toBackup.length; ++i) {
                 try {
+                    toBackup[i].setAccessible(true);
                     toBackup[i].set(obj, fieldsValues[i]);
                 } catch (IllegalAccessException ignored) {
                 }
@@ -168,6 +167,7 @@ public class StoryTesterImpl implements provided.StoryTester {
 
 
     private void invokeMethod(Method method, Object Object, String parameter) throws Exception {
+        method.setAccessible(true);
         if (isNumeric(parameter))
             method.invoke(Object, Integer.parseInt(parameter));
         else
@@ -263,6 +263,7 @@ public class StoryTesterImpl implements provided.StoryTester {
         Class<?>[] innerClasses = enclosingClass.getClasses();
         for (Class<?> innerClass : innerClasses) {
             Constructor<?> ctor = innerClass.getDeclaredConstructor(enclosingClass);
+            ctor.setAccessible(true);
             Object innerInstance = ctor.newInstance(enclosingInstance);
             //region local Given
             Method methodWithGivenAnnotation = getMethodOnInheritanceTree(innerClass, Given.class, annotationValue);
